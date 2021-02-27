@@ -28,25 +28,8 @@ public class Test {
         try {
             ServerSocket serverSocket = new ServerSocket(4396);
             Socket accept = serverSocket.accept();
-            InputStream inputStream = accept.getInputStream();
-            int length = 0;
-            byte[] bytes = new byte[1024];
-            ByteArrayOutputStream baos = new ByteArrayOutputStream();
-
-            while ((length = inputStream.read(bytes)) > -1) {
-
-                if (length == 0) {
-                    break;
-                }
-                baos.write(bytes, 0, length);
-                String s = baos.toString();
-                int count = StrUtil.count(s, "\r\n\r\n");
-                if (count > 0) {
-
-                }
-
-            }
-            System.out.println(baos.toString());
+            HttpUtil.ParseRequest(accept, accept.getInputStream());
+            accept.close();
 
         } catch (Exception e) {
             e.printStackTrace();
