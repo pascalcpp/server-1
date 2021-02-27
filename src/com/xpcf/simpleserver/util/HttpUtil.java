@@ -63,13 +63,12 @@ public class HttpUtil {
                 }
 
             } else {
-
                 processPost(temp, bytes, inputStream, socket, length);
-
+                break;
             }
 
-
         }
+//        inputStream.close();
     }
 
     /**
@@ -112,6 +111,7 @@ public class HttpUtil {
                         }
                     }
                     processPostBody(bodyBaos.toByteArray(), boundary);
+                    break;
 
                 }
 
@@ -121,13 +121,25 @@ public class HttpUtil {
             }
         }
 
+        OutputStream outputStream = socket.getOutputStream();
+        String responseHeader = "HTTP/1.1 200 OK\r\n" +
+                "Content-Type: text/html\r\n\r\n";
+        String responseText = "upload success";
+
+        outputStream.write((responseHeader + responseText).getBytes(StandardCharsets.ISO_8859_1));
+//        outputStream.flush();
+//        outputStream.close();
     }
 
     private static void processPostBody(byte[] bytes, String boundary) {
         String content = new String(bytes, StandardCharsets.ISO_8859_1);
+        String fileName = StrUtil.subBetween(content, "Content-Disposition: ", "\r\n")
+                .split(" ")[2]
+                .split("=")[1]
+                .replace("\"", "");
         String realBody = StrUtil.subBetween(content, "\r\n\r\n", "--" + boundary + "--");
         byte[] bodyBytes = realBody.getBytes(StandardCharsets.ISO_8859_1);
-        File file = new File(HttpConstant.WEBFILES_DIR, "temp.jpg");
+        File file = new File(HttpConstant.WEBFILES_DIR, fileName);
         FileUtil.writeBytes(bodyBytes, file);
 
     }
@@ -142,14 +154,30 @@ public class HttpUtil {
      * @throws IOException
      */
     private static void processGet(String temp, InputStream inputStream, String uri, Socket socket) throws IOException {
-        File downloadFile = new File(HttpConstant.WEBFILES_DIR, uri);
-        byte[] fileBytes = FileUtil.readBytes(downloadFile);
+
         OutputStream outputStream = socket.getOutputStream();
-        byte[] response200Bytes = HttpConstant.HTTP_RESPONSE_200.getBytes(StandardCharsets.ISO_8859_1);
-        byte[] responseBytes = new byte[response200Bytes.length + fileBytes.length];
-        ArrayUtil.copy(response200Bytes, 0, responseBytes, 0, response200Bytes.length);
-        ArrayUtil.copy(fileBytes, 0, responseBytes, response200Bytes.length, fileBytes.length);
-        outputStream.write(responseBytes);
+
+        if ("/".equals(uri) || "/favicon.ico".equals(uri)) {
+
+            String responseHeader = "HTTP/1.1 200 OK\r\n" +
+                    "Content-Type: text/html\r\n\r\n";
+            File downloadFile = new File(HttpConstant.WEBFILES_DIR, "upload.html");
+            byte[] fileBytes = FileUtil.readBytes(downloadFile);
+            String text = new String(fileBytes, StandardCharsets.ISO_8859_1);
+            outputStream.write((responseHeader + text).getBytes(StandardCharsets.ISO_8859_1));
+        } else {
+            File downloadFile = new File(HttpConstant.WEBFILES_DIR, uri);
+            byte[] fileBytes = FileUtil.readBytes(downloadFile);
+
+            byte[] response200Bytes = HttpConstant.HTTP_RESPONSE_200.getBytes(StandardCharsets.ISO_8859_1);
+
+            byte[] responseBytes = new byte[response200Bytes.length + fileBytes.length];
+
+            ArrayUtil.copy(response200Bytes, 0, responseBytes, 0, response200Bytes.length);
+            ArrayUtil.copy(fileBytes, 0, responseBytes, response200Bytes.length, fileBytes.length);
+            outputStream.write(responseBytes);
+        }
+
 
     }
 
